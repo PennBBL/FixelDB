@@ -50,7 +50,7 @@ jobs:
               docker build \
                 --cache-from=pennbbl/fixeldb \
                 --rm=false \
-                -t pennbbl/qsiprep:latest \
+                -t pennbbl/fixeldb:latest \
                 --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
                 --build-arg VCS_REF=`git rev-parse --short HEAD` \
                 --build-arg VERSION="${CIRCLE_TAG:-$THISVERSION}" . \
@@ -68,7 +68,7 @@ jobs:
       - persist_to_workspace:
           root: /tmp
           paths:
-            - src/qsiprep
+            - src/FixelDB
 
       - save_cache:
          key: docker-v1-{{ .Branch }}-{{ .Revision }}-{{ epoch }}
