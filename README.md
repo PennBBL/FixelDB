@@ -1,5 +1,4 @@
 # FixelDB
 Fixel storage and access through a database
 
-.. image:: https://circleci.com/gh/PennBBL/fixeldb/tree/master.svg?style=svg
-  :target: https://circleci.com/gh/PennBBL/fixeldb/tree/master
+[![CircleCI](https://circleci.com/gh/PennBBL/FixelDB.svg?style=svg)](https://circleci.com/gh/PennBBL/FixelDB)
