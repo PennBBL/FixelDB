@@ -93,7 +93,7 @@ jobs:
             if [[ ! -d /tmp/data/fixeldata ]]; then
               wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 0 -q \
                 -O fixeldata.tar.gz "https://upenn.box.com/shared/static/a1co6vdi8i4tqt12cjp96glrq32hg3kq.gz"
-              tar xvfJ fixeldata.tar.gz -C /tmp/data/
+              tar xvfz fixeldata.tar.gz -C /tmp/data/
             else
               echo "Fixel data was cached"
             fi
