@@ -1,6 +1,8 @@
 import numpy as np
 import nibabel as nb
 import pandas as pd
+from tqdm import tqdm
+import sqlalchemy as sa
 
 def gather_fixels(index_file, directions_file):
     """
@@ -44,9 +46,64 @@ def gather_fixels(index_file, directions_file):
             j=sorted_coords[:, 1],
             k=sorted_coords[:, 2]))
 
+    directions_img = nb.load(directions_file)
+    directions_data = directions_img.get_data().squeeze()
+
     fixel_table = pd.DataFrame(
         dict(
             fixel_id=fixel_ids,
-            voxel_id=fixel_voxel_ids))
+            voxel_id=fixel_voxel_ids,
+            x = directions_data[:,0],
+            y = directions_data[:,1],
+            z = directions_data[:,2])
+        )
 
     return fixel_table, voxel_table
+
+def upload_cohort(index_file, directions_file, cohort_file):
+    """
+    Load all fixeldb data.
+
+    Parameters
+    -----------
+
+    index_file: str
+        path to a Nifti2 index file
+    directions_file: str
+        path to a Nifti2 directions file
+    """
+    # define engine
+    engine = sa.create_engine('mysql+pymysql://fixeluser:fixels@localhost:3306/fixeldb')
+
+    # gather fixel data
+    fixel_table, voxel_table = gather_fixels(index_file, directions_file)
+
+    # upload fixel data
+    voxel_table.to_sql('voxels', engine, index=False, if_exists="replace")
+    fixel_table.to_sql('fixels', engine, index=False, if_exists="replace")
+
+    # gather cohort data
+    cohort_df = pd.read_csv(cohort_file)
+
+    # upload each cohort's data
+    for ix, row in tqdm(cohort_df.iterrows(), total=cohort_df.shape[0]):
+
+
+        scalar_img = nb.load(row.nifti2_file)
+        scalar_data = scalar_img.get_data().squeeze()
+        scalar_df = pd.DataFrame(
+            {"value": scalar_data, "_id": ix}
+        )
+
+        # upload here
+        scalar_df.to_sql(row.scalar_name, engine, index_label='fixel_id', if_exists="append")
+
+        pheno = row.to_dict()
+        del pheno['scalar_name']
+        del pheno['nifti2_file']
+
+        pheno["_id"] = ix
+        pheno_df = pd.DataFrame([pheno])
+        pheno_df.to_sql('phenotypes', engine, index=False, if_exists="append")
+
+    return 0
