@@ -4,6 +4,16 @@ import pandas as pd
 from tqdm import tqdm
 import sqlalchemy as sa
 
+"""
+assumes you've started a db on docker like so:
+
+docker run -ti --name mariadb1 --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels -d -v $PWD/login.py:/login.py pennbbl/fixeldb
+
+for debugging you can enter the container with:
+
+docker exec -it mariadb1 mariadb -u fixeluser -p
+"""
+
 def gather_fixels(index_file, directions_file):
     """
     Load the index and directions files to get lookup tables.
