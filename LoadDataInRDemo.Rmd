@@ -1,0 +1,40 @@
+---
+title: "Connecting to a FixelDB Demo"
+output: html_notebook
+---
+
+
+```{r}
+library(dbplyr)
+library(RMariaDB)
+```
+
+
+```{r}
+con <- DBI::dbConnect(RMySQL::MySQL(),
+  host = "127.0.0.1",
+  user = "fixeluser",
+  password = "fixels",
+  port=3306,
+  dbname="fixeldb"
+)
+```
+
+```{r}
+voxels <- tbl(con, "voxels")
+voxels
+```
+
+Well that works.
+
+```{r}
+phenotypes <- tbl(con, "phenotypes")
+phenotypes
+```
+
+```{r}
+res = dbGetQuery(con, "SELECT * FROM FD A INNER JOIN phenotypes B ON A._id = B._id WHERE A.fixel_id = 1;")
+res
+```
+
+That works too.
