@@ -7,7 +7,8 @@ RUN apt-get -y update && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install nibabel and mysql things
-RUN pip3 install --no-cache-dir setuptools nibabel pandas
+RUN pip3 install --upgrade setuptools
+RUN pip3 install --no-cache-dir setuptools nibabel pandas tqdm SQLAlchemy argparse
 RUN pip3 install --no-cache-dir mysql-connector
 
 # THIS DOESN'T WORK
@@ -16,6 +17,8 @@ ENV MYSQL_USER 'fixeluser'  \
     MYSQL_DATABASE 'fixeldb'
     # MYSQL_ROOT_PASSWORD 'my-secret-pw'
 
+RUN mkdir -p /fixeldb
+COPY ./fixeldb/* /fixeldb/
 # Install mrtrix3 from source
 # ARG MRTRIX_SHA=5d6b3a6ffc6ee651151779539c8fd1e2e03fad81
 # ENV PATH="/opt/mrtrix3-latest/bin:$PATH"

@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 import nibabel as nb
 import pandas as pd
 from tqdm import tqdm
@@ -117,3 +118,37 @@ def upload_cohort(index_file, directions_file, cohort_file):
         pheno_df.to_sql('phenotypes', engine, index=False, if_exists="append")
 
     return 0
+
+
+def get_parser():
+
+    parser = argparse.ArgumentParser(
+        description="Set up a MariaDB instance of Fixel data")
+    parser.add_argument(
+        "--index-file",
+        help="Index File",
+        required=True
+    )
+    parser.add_argument(
+        "--directions-file",
+        help="Index File",
+        required=True
+    )
+    parser.add_argument(
+        "--cohort-file",
+        help="Index File",
+        required=True
+    )
+
+    return parser
+
+
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
+
+    status = upload_cohort(args.index_file, args.directions_file, args.cohort_file)
+
+if __name__ == "__main__":
+    main()
