@@ -7,10 +7,8 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(RMariaDB)
-library(progress)
 library(tictoc)
-library(furrr)
-library(pool)
+library(parallel)
 ```
 
 
@@ -257,11 +255,24 @@ myfunc3 <- function(n_fixels, c_cores){
 # future_map_dfr(1:20, myfunc2)
 ```
 
+---
+
+# A function to establish the connection
+
+```{r}
+setup_connection <- function(){
+
+  con <- DBI::dbConnect(RMySQL::MySQL(), host = "127.0.0.1", user = "fixeluser", password = "fixels", port=3306, dbname="fixeldb")
+
+  return(con)
+}
+```
+
 
 # A function to fetch Fixel data:
 
 ```{r}
-fetch_fixel_df <- function(fixel_id, variable){
+fetch_fixel_df <- function(fixel_id, variable, connection){
   
   tryCatch(
     # try this
@@ -277,9 +288,13 @@ fetch_fixel_df <- function(fixel_id, variable){
     }
     
     # run query
-    query_res = dbGetQuery(con, sprintf("SELECT * FROM %s A INNER JOIN phenotypes B ON A._id = B._id WHERE A.fixel_id = %d", variable, fixel_id))
+    query_res <- tryCatch(error = function(cnd) cnd, dbGetQuery(con, sprintf("SELECT * FROM %s A INNER JOIN phenotypes B ON A._id = B._id WHERE A.fixel_id = %d", variable, fixel_id)))
     
     # ensure query was successful
+    if(!is.data.frame(query_res)){
+      stop(print(query_res$message))
+    }
+    
     if(nrow(query_res) < 1){
       stop()
     }
@@ -320,23 +335,37 @@ summary_func <- function(df){
 batch_function <- function(id_vec, func, variable){
   
   failed = c()
-  results_df <- vector("list", length = len(id_vec))
+  results_df <- vector("list", length = length(id_vec))
   
   for(id_num in id_vec){
     
-    df <- fetch_fixel_df(id_num, variable)
+    con <- setup_connection()
+    df <- fetch_fixel_df(id_num, variable, con)
+    DBI::dbDisconnect(con)
+    rm(con)
+    
     if(nrow(df) < 1){
       failed <- c(failed, id_num)
     } else {
       
       fixel_summary <- summary_func(df)
       
-      if(fixel_summary)
+      if(!is.data.frame(fixel_summary)){
+        results_df[[id_num]] <- data.frame()
+      }
         
-      results[[id_num]] <- summary_func(df)
+      results_df[[id_num]] <- summary_func(df)
     }
-    
   }
+  
+  return(do.call(bind_rows, results_df))
+  
 }
+```
+
+```{r}
+tic()
+batch_function(1:500, summary_func, "FD")
+toc()
 ```
 
