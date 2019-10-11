@@ -288,7 +288,7 @@ fetch_fixel_df <- function(fixel_id, variable, connection){
     }
     
     # run query
-    query_res <- tryCatch(error = function(cnd) cnd, dbGetQuery(con, sprintf("SELECT * FROM %s A INNER JOIN phenotypes B ON A._id = B._id WHERE A.fixel_id = %d", variable, fixel_id)))
+    query_res <- tryCatch(error = function(cnd) cnd, dbGetQuery(connection, sprintf("SELECT * FROM %s A INNER JOIN phenotypes B ON A._id = B._id WHERE A.fixel_id = %d", variable, fixel_id)))
     
     # ensure query was successful
     if(!is.data.frame(query_res)){
