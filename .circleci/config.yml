@@ -135,6 +135,9 @@ jobs:
       - run:
           name: Start MariaDB in Docker
           command: |
+            mkdir -p /tmp/data/mariadb && \
+              sudo setfacl -d -m group:$(id -gn):rwx /tmp/data/mariadb && \
+              sudo setfacl -m group:$(id -gn):rwx /tmp/data/mariadb
             docker run -ti --name fixeldb \
               --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw \
               -v /tmp/data/mariadb:/var/lib/mysql \
@@ -148,11 +151,9 @@ jobs:
           name: Upload test data
           no_output_timeout: 2h
           command: |
-            mkdir -p /tmp/data/mariadb && \
-              sudo setfacl -d -m group:$(id -gn):rwx /tmp/data/mariadb && \
-              sudo setfacl -m group:$(id -gn):rwx /tmp/data/mariadb
             cp /tmp/src/FixelDB/.circleci/test_cohort.csv /tmp/data/test_cohort.csv
             sudo chmod a+r /tmp/data/test_cohort.csv
+            sleep 33
             docker exec -it fixeldb fixeldb_upload \
               --relative-root /inputs \
               --directions-file fixeldata/directions.mif \
