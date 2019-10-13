@@ -160,6 +160,9 @@ jobs:
               --index-file fixeldata/index.mif \
               --cohort-file test_cohort.csv
 
+      - store_artifacts:
+          path: /tmp/data/mariadb
+
 
 workflows:
   version: 2

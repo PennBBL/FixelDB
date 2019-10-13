@@ -78,7 +78,7 @@ def gather_fixels(index_file, directions_file):
     voxel_coords = np.column_stack(np.nonzero(count_vol))
 
     fixel_id = 0
-    fixel_ids = np.arange(max_fixel_id, dtype=np.int)
+    fixel_ids = np.arange(max_fixel_id, dtype=np.int32)
     fixel_voxel_ids = np.zeros_like(fixel_ids)
     for voxel_id, fixel_count in enumerate(sorted_counts):
         for _ in range(fixel_count):
@@ -98,9 +98,9 @@ def gather_fixels(index_file, directions_file):
         dict(
             fixel_id=fixel_ids,
             voxel_id=fixel_voxel_ids,
-            x = directions_data[:,0],
-            y = directions_data[:,1],
-            z = directions_data[:,2])
+            x=directions_data[:,0],
+            y=directions_data[:,1],
+            z=directions_data[:,2])
         )
 
     return fixel_table, voxel_table
@@ -128,9 +128,24 @@ def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
     fixel_table, voxel_table = gather_fixels(op.join(relative_root, index_file),
                                              op.join(relative_root, directions_file))
 
+    voxel_dtypes = {
+        'voxel_id': sa.Integer(),
+        'i': sa.Integer(),
+        'j': sa.Integer(),
+        'k': sa.Integer()
+    }
     # upload fixel data
-    voxel_table.to_sql('voxels', engine, index=False, if_exists="replace")
-    fixel_table.to_sql('fixels', engine, index=False, if_exists="replace")
+    voxel_table.to_sql('voxels', engine, index=True, index_label='voxel_id',
+                       if_exists="replace", dtype=voxel_dtypes)
+    fixel_dtypes = {
+        'voxel_id': sa.Integer(),
+        'fixel_id': sa.Integer(),
+        'x': sa.Float(),
+        'y': sa.Float(),
+        'z': sa.Float()
+    }
+    fixel_table.to_sql('fixels', engine, index=True, index_label='fixel_id', if_exists="replace",
+                       dtype=fixel_dtypes)
 
     # gather cohort data
     cohort_df = pd.read_csv(op.join(relative_root, cohort_file))
