@@ -135,14 +135,14 @@ jobs:
       - run:
           name: Start MariaDB in Docker
           command: |
-          docker run -ti --name fixeldb \
-            --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw \
-            -v /tmp/data/mariadb:/var/lib/mysql \
-            -v /tmp/data:/inputs \
-            -v /tmp:/tmp \
-            -p 3306:3306 \
-            -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels \
-            -d pennbbl/fixeldb
+            docker run -ti --name fixeldb \
+              --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+              -v /tmp/data/mariadb:/var/lib/mysql \
+              -v /tmp/data:/inputs \
+              -v /tmp:/tmp \
+              -p 3306:3306 \
+              -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels \
+              -d pennbbl/fixeldb
 
       - run:
           name: Upload test data
