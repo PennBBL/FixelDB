@@ -177,3 +177,15 @@ workflows:
                 - /tests?\/.*/
             tags:
               only: /.*/
+
+      - FixelUpload:
+          requires:
+            - get_data
+            - build
+          filters:
+            branches:
+              ignore:
+                - /docs?\/.*/
+                - /tests?\/.*/
+            tags:
+              only: /.*/
