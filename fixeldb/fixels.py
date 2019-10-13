@@ -135,7 +135,7 @@ def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
         'k': sa.Integer()
     }
     # upload fixel data
-    voxel_table.to_sql('voxels', engine, index=True, index_label='voxel_id',
+    voxel_table.to_sql('voxels', engine, index=False, index_label='voxel_id',
                        if_exists="replace", dtype=voxel_dtypes)
     fixel_dtypes = {
         'voxel_id': sa.Integer(),
@@ -144,7 +144,7 @@ def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
         'y': sa.Float(),
         'z': sa.Float()
     }
-    fixel_table.to_sql('fixels', engine, index=True, index_label='fixel_id', if_exists="replace",
+    fixel_table.to_sql('fixels', engine, index=False, index_label='fixel_id', if_exists="replace",
                        dtype=fixel_dtypes)
 
     # gather cohort data
