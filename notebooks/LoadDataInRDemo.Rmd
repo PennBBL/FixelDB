@@ -7,25 +7,14 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(RMariaDB)
+library(RMySQL)
+library(DBI)
 library(tictoc)
 library(parallel)
 ```
 
 
 ```{r}
-pool <- dbPool(
-  drv = RMySQL::MySQL(),
-  host = "127.0.0.1",
-  username = "fixeluser",
-  password = "fixels",
-  port = 3306,
-  dbname = "fixeldb"
-)
-
-onStop(function() {
-  poolClose(pool)
-})
-
 con <- DBI::dbConnect(RMySQL::MySQL(),
   host = "127.0.0.1",
   user = "fixeluser",
@@ -260,14 +249,29 @@ myfunc3 <- function(n_fixels, c_cores){
 # A function to establish the connection
 
 ```{r}
-setup_connection <- function(){
+setup_connection <- function(n){
 
-  con <- DBI::dbConnect(RMySQL::MySQL(), host = "127.0.0.1", user = "fixeluser", password = "fixels", port=3306, dbname="fixeldb")
+  con <- dbConnect(MySQL(max.con = n), host = "127.0.0.1", user = "fixeluser", password = "fixels", port=3306, dbname="fixeldb")
 
   return(con)
 }
+
+remove_connections <- function(){
+  
+  lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
+
+}
 ```
 
+# A function to establish the number of fixels available
+
+```{r}
+num_fixels <- function(connection){
+  dbGetQuery(connection, "SELECT MAX(fixel_id) FROM FD;") %>%
+    as.integer() + 1%>%
+    return()
+}
+```
 
 # A function to fetch Fixel data:
 
@@ -337,12 +341,13 @@ batch_function <- function(id_vec, func, variable){
   failed = c()
   results_df <- vector("list", length = length(id_vec))
   
+  multiple_socket_connection <- setup_connection(length(id_vec))
+  
   for(id_num in id_vec){
     
-    con <- setup_connection()
-    df <- fetch_fixel_df(id_num, variable, con)
-    DBI::dbDisconnect(con)
-    rm(con)
+    ix <- id_num + 1
+    
+    df <- fetch_fixel_df(id_num, variable, multiple_socket_connection)
     
     if(nrow(df) < 1){
       failed <- c(failed, id_num)
@@ -351,21 +356,111 @@ batch_function <- function(id_vec, func, variable){
       fixel_summary <- summary_func(df)
       
       if(!is.data.frame(fixel_summary)){
-        results_df[[id_num]] <- data.frame()
+        results_df[[ix]] <- data.frame() %>%
+          mutate(fixel_id = id_num)
       }
         
-      results_df[[id_num]] <- summary_func(df)
+      results_df[[ix]] <- fixel_summary %>%
+        mutate(fixel_id = id_num)
     }
   }
   
+  dbDisconnect(multiple_socket_connection)
+  rm(multiple_socket_connection)
+  
+  print(failed)
   return(do.call(bind_rows, results_df))
   
 }
 ```
 
+# A function to split a fixel based analysis into batches and run in parallel
+
 ```{r}
+library(parallel)
+library(MASS)
+
+starts <- rep(50000, 40)
+fx <- function(nstart) kmeans(Boston, 4, nstart=nstart)
+numCores <- detectCores()
+numCores
+
 tic()
-batch_function(1:500, summary_func, "FD")
+results <- mclapply(starts, fx, mc.cores = numCores)
 toc()
+```
+
+```{r}
+library(parallel)
+
+numCores <- detectCores() - 6
+numCores
+
+parallel_FBA <- function(id_vec, func, variable, numCores){
+  
+  tic()
+  tibble(id_vec, core = sort(id_vec %% numCores) + 1) %>%
+    group_by(core) %>%
+    nest() %>%
+    mutate(
+      results = lapply(data, function(x){
+      
+        batch_function(x$id_vec, summary_func, "FD")
+      
+      })#, mc.cores = numCores)
+    ) %>%
+    unnest(results)
+  toc()
+}
+```
+
+```{r}
+times <- list()
+
+vecs <- c(10, 50, 100, 250, 500, 1000, 1500, 2000, 5000, 7500, 10000, 25000, 50000, 100000, 250000)
+
+numCores <- 12
+
+for(i in vecs){
+
+  id_vec = 1:i
+  
+  t0 <- Sys.time()  
+  fixel_analysis <- tibble(id_vec, core = sort(id_vec %% numCores) + 1) %>%
+    group_by(core) %>%
+    nest() %>%
+    mutate(
+      results = lapply(data, function(x){
+      
+        batch_function(x$id_vec, summary_func, "FD")
+      
+      })#, mc.cores = numCores)
+    ) %>%
+    unnest(results)
+  t1 <- Sys.time()
+  lapp_time <- as.numeric(difftime(as.POSIXct(t1), as.POSIXct(t0)))
+
+  t0 <- Sys.time()  
+  fixel_analysis <- tibble(id_vec, core = sort(id_vec %% numCores) + 1) %>%
+    group_by(core) %>%
+    nest() %>%
+    mutate(
+      results = mclapply(data, function(x){
+      
+        batch_function(x$id_vec, summary_func, "FD")
+      
+      }, mc.cores = numCores)
+    ) %>%
+    unnest(results)
+  t1 <- Sys.time()
+  mclapp_time <- as.numeric(difftime(as.POSIXct(t1), as.POSIXct(t0)))
+  
+  times[[i]] <- data.frame("lapp"=lapp_time, "mclapp" = mclapp_time, "n_fixels"=i)
+}
+
+bind_rows(times) %>%
+  gather('method', 'seconds', -n_fixels) %>%
+  ggplot(aes(x=n_fixels, y=seconds))+
+    geom_line(aes(colour=method))
 ```
 

@@ -8,7 +8,7 @@ RUN apt-get -y update && \
 
 # Install nibabel and mysql things
 RUN pip3 install --upgrade setuptools
-RUN pip3 install --no-cache-dir setuptools nibabel pandas tqdm SQLAlchemy argparse
+RUN pip3 install --no-cache-dir setuptools nibabel pandas tqdm SQLAlchemy argparse pymysql
 RUN pip3 install --no-cache-dir mysql-connector
 
 # THIS DOESN'T WORK

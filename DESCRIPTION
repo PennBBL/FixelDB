@@ -1,0 +1,13 @@
+Package: FixelDB
+Title: An interface for fixel data storage, access, and analysis through a MariaDB database backend
+Version: 0.0.0.1
+Authors@R: 
+    person(given = "First",
+           family = "Last",
+           role = c("aut", "cre"),
+           email = "first.last@example.com",
+           comment = structure("YOUR-ORCID-ID", .Names = "ORCID"))
+Description: What the package does (one paragraph).
+License: BSD 3-Clause License
+Encoding: UTF-8
+LazyData: true
