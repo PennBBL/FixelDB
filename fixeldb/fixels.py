@@ -1,5 +1,10 @@
-import numpy as np
 import argparse
+import shutil
+import os
+import os.path as op
+import tempfile
+import subprocess
+import numpy as np
 import nibabel as nb
 import pandas as pd
 from tqdm import tqdm
@@ -15,6 +20,38 @@ for debugging you can enter the container with:
 docker exec -it mariadb1 mariadb -u fixeluser -p
 """
 
+def find_mrconvert():
+    program = 'mrconvert'
+
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    for path in os.environ["PATH"].split(os.pathsep):
+        path = path.strip('"')
+        exe_file = os.path.join(path, program)
+        if is_exe(exe_file):
+            return program
+    return None
+
+
+def mif_to_nifti2(mif_file):
+    dirpath = tempfile.mkdtemp()
+    mrconvert = find_mrconvert()
+    if mrconvert is None:
+        raise Exception("The mrconvert executable could not be found on $PATH")
+    nii_file = op.join(dirpath, 'mif.nii')
+    proc = subprocess.Popen([mrconvert, mif_file, nii_file], stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    _, err = proc.communicate()
+    if not op.exists(nii_file):
+        raise Exception(err)
+    nifti2_img = nb.load(nii_file)
+    data = nifti2_img.get_data().squeeze()
+    # ... do stuff with dirpath
+    shutil.rmtree(dirpath)
+    return nifti2_img, data
+
+
 def gather_fixels(index_file, directions_file):
     """
     Load the index and directions files to get lookup tables.
@@ -28,8 +65,7 @@ def gather_fixels(index_file, directions_file):
         path to a Nifti2 directions file
     """
 
-    index_img = nb.load(index_file)
-    index_data = index_img.get_data()
+    index_img, index_data = mif_to_nifti2(index_file)
     count_vol = index_data[..., 0]
     id_vol = index_data[..., 1]
     max_id = id_vol.max()
@@ -42,7 +78,7 @@ def gather_fixels(index_file, directions_file):
     voxel_coords = np.column_stack(np.nonzero(count_vol))
 
     fixel_id = 0
-    fixel_ids = np.arange(max_fixel_id, dtype=np.int)
+    fixel_ids = np.arange(max_fixel_id, dtype=np.int32)
     fixel_voxel_ids = np.zeros_like(fixel_ids)
     for voxel_id, fixel_count in enumerate(sorted_counts):
         for _ in range(fixel_count):
@@ -57,21 +93,19 @@ def gather_fixels(index_file, directions_file):
             j=sorted_coords[:, 1],
             k=sorted_coords[:, 2]))
 
-    directions_img = nb.load(directions_file)
-    directions_data = directions_img.get_data().squeeze()
-
+    directions_img, directions_data = mif_to_nifti2(directions_file)
     fixel_table = pd.DataFrame(
         dict(
             fixel_id=fixel_ids,
             voxel_id=fixel_voxel_ids,
-            x = directions_data[:,0],
-            y = directions_data[:,1],
-            z = directions_data[:,2])
+            x=directions_data[:,0],
+            y=directions_data[:,1],
+            z=directions_data[:,2])
         )
 
     return fixel_table, voxel_table
 
-def upload_cohort(index_file, directions_file, cohort_file):
+def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
     """
     Load all fixeldb data.
 
@@ -82,26 +116,46 @@ def upload_cohort(index_file, directions_file, cohort_file):
         path to a Nifti2 index file
     directions_file: str
         path to a Nifti2 directions file
+    cohort_file: str
+        path to a csv with demographic info and paths to data
+    relative_root: str
+        path to which index_file, directions_file and cohort_file (and its contents) are relative
     """
     # define engine
     engine = sa.create_engine('mysql+pymysql://fixeluser:fixels@localhost:3306/fixeldb')
 
     # gather fixel data
-    fixel_table, voxel_table = gather_fixels(index_file, directions_file)
+    fixel_table, voxel_table = gather_fixels(op.join(relative_root, index_file),
+                                             op.join(relative_root, directions_file))
 
+    voxel_dtypes = {
+        'voxel_id': sa.Integer(),
+        'i': sa.Integer(),
+        'j': sa.Integer(),
+        'k': sa.Integer()
+    }
     # upload fixel data
-    voxel_table.to_sql('voxels', engine, index=False, if_exists="replace")
-    fixel_table.to_sql('fixels', engine, index=False, if_exists="replace")
+    voxel_table.to_sql('voxels', engine, index=False, index_label='voxel_id',
+                       if_exists="replace", dtype=voxel_dtypes)
+    fixel_dtypes = {
+        'voxel_id': sa.Integer(),
+        'fixel_id': sa.Integer(),
+        'x': sa.Float(),
+        'y': sa.Float(),
+        'z': sa.Float()
+    }
+    fixel_table.to_sql('fixels', engine, index=False, index_label='fixel_id', if_exists="replace",
+                       dtype=fixel_dtypes)
 
     # gather cohort data
-    cohort_df = pd.read_csv(cohort_file)
+    cohort_df = pd.read_csv(op.join(relative_root, cohort_file))
 
     # upload each cohort's data
     for ix, row in tqdm(cohort_df.iterrows(), total=cohort_df.shape[0]):
+        print(row)
 
-
-        scalar_img = nb.load(row.nifti2_file)
-        scalar_data = scalar_img.get_data().squeeze()
+        scalar_file = op.join(relative_root, row.scalar_mif)
+        scalar_img, scalar_data = mif_to_nifti2(scalar_file)
         scalar_df = pd.DataFrame(
             {"value": scalar_data, "_id": ix}
         )
@@ -111,7 +165,7 @@ def upload_cohort(index_file, directions_file, cohort_file):
 
         pheno = row.to_dict()
         del pheno['scalar_name']
-        del pheno['nifti2_file']
+        del pheno['scalar_mif']
 
         pheno["_id"] = ix
         pheno_df = pd.DataFrame([pheno])
@@ -139,6 +193,11 @@ def get_parser():
         help="Index File",
         required=True
     )
+    parser.add_argument(
+        "--relative-root", "--relative_root",
+        help="Root to which all paths are relative",
+        type=os.path.abspath
+    )
 
     return parser
 
@@ -148,7 +207,10 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    status = upload_cohort(args.index_file, args.directions_file, args.cohort_file)
+    status = upload_cohort(args.index_file, args.directions_file, args.cohort_file,
+                           args.relative_root)
+    return status
+
 
 if __name__ == "__main__":
     main()

@@ -109,6 +109,61 @@ jobs:
             - /tmp/data
 
 
+  FixelUpload:
+    machine:
+      image: ubuntu-1604:201903-01
+    working_directory: /tmp/data
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - restore_cache:
+          keys:
+            - docker-v1-{{ .Branch }}-{{ .Revision }}
+            - data-v1-{{ .Revision }}
+            - data-v1-
+      - run:
+          name: Load Docker image layer cache
+          no_output_timeout: 30m
+          command: |
+            docker info
+            set +o pipefail
+            if [ -f /tmp/cache/docker.tar.gz ]; then
+              sudo apt update && sudo apt -y install pigz
+              pigz -d --stdout /tmp/cache/docker.tar.gz | docker load
+              docker images
+            fi
+      - run:
+          name: Start MariaDB in Docker
+          command: |
+            mkdir -p /tmp/data/mariadb && \
+              sudo setfacl -d -m group:$(id -gn):rwx /tmp/data/mariadb && \
+              sudo setfacl -m group:$(id -gn):rwx /tmp/data/mariadb
+            docker run -ti --name fixeldb \
+              --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+              -v /tmp/data/mariadb:/var/lib/mysql \
+              -v /tmp/data:/inputs \
+              -v /tmp:/tmp \
+              -p 3306:3306 \
+              -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels \
+              -d pennbbl/fixeldb
+
+      - run:
+          name: Upload test data
+          no_output_timeout: 2h
+          command: |
+            cp /tmp/src/FixelDB/.circleci/test_cohort.csv /tmp/data/test_cohort.csv
+            sudo chmod a+r /tmp/data/test_cohort.csv
+            sleep 33
+            docker exec -it fixeldb fixeldb_upload \
+              --relative-root /inputs \
+              --directions-file fixeldata/directions.mif \
+              --index-file fixeldata/index.mif \
+              --cohort-file test_cohort.csv
+
+      - store_artifacts:
+          path: /tmp/data/mariadb
+
+
 workflows:
   version: 2
   build_test_deploy:
@@ -119,6 +174,18 @@ workflows:
               only: /.*/
 
       - get_data:
+          filters:
+            branches:
+              ignore:
+                - /docs?\/.*/
+                - /tests?\/.*/
+            tags:
+              only: /.*/
+
+      - FixelUpload:
+          requires:
+            - get_data
+            - build
           filters:
             branches:
               ignore:
