@@ -141,13 +141,13 @@ def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
     # Write the output
     output_file = op.join(relative_root, output_h5)
     f = h5py.File(output_file, "w")
-    f.create_dataset(name="fixels", data=fixel_table.to_numpy())
-    f.create_dataset(name="voxels", data=voxel_table.to_numpy())
+    f.create_dataset(name="fixels", data=fixel_table.to_numpy().T)
+    f.create_dataset(name="voxels", data=voxel_table.to_numpy().T)
     for scalar_name in scalars.keys():
         f.create_dataset('scalars/{}/values'.format(scalar_name),
-                         data=np.column_stack(scalars[scalar_name]))
+                         data=np.row_stack(scalars[scalar_name]))
         f.create_dataset('scalars/{}/ids'.format(scalar_name),
-                         data=np.column_stack(subject_lists[scalar_name]))
+                         data=np.row_stack(subject_lists[scalar_name]))
     f.close()
     return int(op.exists(output_file))
 
@@ -157,15 +157,15 @@ def get_parser():
     parser = argparse.ArgumentParser(
         description="Create a hdf5 file of fixel data")
     parser.add_argument(
-        "--index-file",
+        "--index-file", "--index_file",
         help="Index File",
         required=True)
     parser.add_argument(
-        "--directions-file",
+        "--directions-file", "--directions_file",
         help="Index File",
         required=True)
     parser.add_argument(
-        "--cohort-file",
+        "--cohort-file", "--cohort-file",
         help="Index File",
         required=True)
     parser.add_argument(
