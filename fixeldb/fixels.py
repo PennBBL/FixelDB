@@ -1,6 +1,7 @@
 import argparse
 import shutil
 import os
+from collections import defaultdict
 import os.path as op
 import tempfile
 import subprocess
@@ -8,17 +9,7 @@ import numpy as np
 import nibabel as nb
 import pandas as pd
 from tqdm import tqdm
-import sqlalchemy as sa
-
-"""
-assumes you've started a db on docker like so:
-
-docker run -ti --name mariadb1 --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels -d -v $PWD/login.py:/login.py pennbbl/fixeldb
-
-for debugging you can enter the container with:
-
-docker exec -it mariadb1 mariadb -u fixeluser -p
-"""
+import h5py
 
 def find_mrconvert():
     program = 'mrconvert'
@@ -35,7 +26,7 @@ def find_mrconvert():
 
 
 def mif_to_nifti2(mif_file):
-    
+
     if not mif_file.endswith(".nii"):
         dirpath = tempfile.mkdtemp()
         mrconvert = find_mrconvert()
@@ -111,7 +102,9 @@ def gather_fixels(index_file, directions_file):
 
     return fixel_table, voxel_table
 
-def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
+
+def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
+               relative_root='/'):
     """
     Load all fixeldb data.
 
@@ -127,58 +120,35 @@ def upload_cohort(index_file, directions_file, cohort_file, relative_root='/'):
     relative_root: str
         path to which index_file, directions_file and cohort_file (and its contents) are relative
     """
-    # define engine
-    engine = sa.create_engine('mysql+pymysql://fixeluser:fixels@localhost:3306/fixeldb')
-
     # gather fixel data
     fixel_table, voxel_table = gather_fixels(op.join(relative_root, index_file),
                                              op.join(relative_root, directions_file))
-
-    voxel_dtypes = {
-        'voxel_id': sa.Integer(),
-        'i': sa.Integer(),
-        'j': sa.Integer(),
-        'k': sa.Integer()
-    }
-    # upload fixel data
-    voxel_table.to_sql('voxels', engine, index=False, index_label='voxel_id',
-                       if_exists="replace", dtype=voxel_dtypes)
-    fixel_dtypes = {
-        'voxel_id': sa.Integer(),
-        'fixel_id': sa.Integer(),
-        'x': sa.Float(),
-        'y': sa.Float(),
-        'z': sa.Float()
-    }
-    fixel_table.to_sql('fixels', engine, index=False, index_label='fixel_id', if_exists="replace",
-                       dtype=fixel_dtypes)
 
     # gather cohort data
     cohort_df = pd.read_csv(op.join(relative_root, cohort_file))
 
     # upload each cohort's data
+    scalars = defaultdict(list)
+    subject_lists = defaultdict(list)
     for ix, row in tqdm(cohort_df.iterrows(), total=cohort_df.shape[0]):
         print(row)
 
         scalar_file = op.join(relative_root, row.scalar_mif)
         scalar_img, scalar_data = mif_to_nifti2(scalar_file)
-        scalar_df = pd.DataFrame(
-            {"value": scalar_data, "_id": ix}
-        )
+        scalars[row['scalar_name']].append(scalar_data)
+        subject_lists[row['scalar_name']].append(ix)
 
-        # upload here
-        scalar_df.to_sql(row.scalar_name, engine, index_label='fixel_id', if_exists="append")
-
-        pheno = row.to_dict()
-        del pheno['scalar_name']
-        del pheno['scalar_mif']
-
-        pheno["_id"] = ix
-        pheno_df = pd.DataFrame([pheno])
-        pheno_df.to_sql('phenotypes', engine, index=False, if_exists="append")
-
-    return 0
-
+    # Write the output
+    f = h5py.File(op.join(relative_root, output_h5), "w")
+    f.create_dataset(name="fixels", data=fixel_table.to_numpy())
+    f.create_dataset(name="voxels", data=voxel_table.to_numpy())
+    f.create_dataset(name="phenotypes", data=cohort_df.to_numpy())
+    for scalar_name in scalars.keys():
+        f.create_dataset('scalars/{}/values'.format(scalar_name),
+                         data=np.column_stack(scalars[scalar_name]))
+        f.create_dataset('scalars/{}/ids'.format(scalar_name),
+                         data=np.column_stack(subject_lists[scalar_name]))
+    f.close()
 
 def get_parser():
 
@@ -204,7 +174,10 @@ def get_parser():
         help="Root to which all paths are relative",
         type=os.path.abspath
     )
-
+    parser.add_argument(
+        "--output-hdf5", "--output_hdf5",
+        help="hdf5 file where outputs will be saved."
+    )
     return parser
 
 
@@ -213,8 +186,8 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    status = upload_cohort(args.index_file, args.directions_file, args.cohort_file,
-                           args.relative_root)
+    status = write_hdf5(args.index_file, args.directions_file, args.cohort_file,
+                        args.relative_root, args.parser)
     return status
 
 
