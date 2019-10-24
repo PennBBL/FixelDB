@@ -35,20 +35,26 @@ def find_mrconvert():
 
 
 def mif_to_nifti2(mif_file):
-    dirpath = tempfile.mkdtemp()
-    mrconvert = find_mrconvert()
-    if mrconvert is None:
-        raise Exception("The mrconvert executable could not be found on $PATH")
-    nii_file = op.join(dirpath, 'mif.nii')
-    proc = subprocess.Popen([mrconvert, mif_file, nii_file], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    _, err = proc.communicate()
+    
+    if not mif_file.endswith(".nii"):
+        dirpath = tempfile.mkdtemp()
+        mrconvert = find_mrconvert()
+        if mrconvert is None:
+            raise Exception("The mrconvert executable could not be found on $PATH")
+        nii_file = op.join(dirpath, 'mif.nii')
+        proc = subprocess.Popen([mrconvert, mif_file, nii_file], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        _, err = proc.communicate()
+    else:
+        nii_file = mif_file
+        dirpath = None
     if not op.exists(nii_file):
         raise Exception(err)
     nifti2_img = nb.load(nii_file)
     data = nifti2_img.get_data().squeeze()
     # ... do stuff with dirpath
-    shutil.rmtree(dirpath)
+    if dirpath:
+        shutil.rmtree(dirpath)
     return nifti2_img, data
 
 
