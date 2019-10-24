@@ -132,20 +132,6 @@ jobs:
               pigz -d --stdout /tmp/cache/docker.tar.gz | docker load
               docker images
             fi
-      - run:
-          name: Start MariaDB in Docker
-          command: |
-            mkdir -p /tmp/data/mariadb && \
-              sudo setfacl -d -m group:$(id -gn):rwx /tmp/data/mariadb && \
-              sudo setfacl -m group:$(id -gn):rwx /tmp/data/mariadb
-            docker run -ti --name fixeldb \
-              --rm -e MYSQL_ROOT_PASSWORD=my-secret-pw \
-              -v /tmp/data/mariadb:/var/lib/mysql \
-              -v /tmp/data:/inputs \
-              -v /tmp:/tmp \
-              -p 3306:3306 \
-              -e MYSQL_DATABASE=fixeldb -e MYSQL_USER=fixeluser -e MYSQL_PASSWORD=fixels \
-              -d pennbbl/fixeldb
 
       - run:
           name: Upload test data
@@ -153,12 +139,15 @@ jobs:
           command: |
             cp /tmp/src/FixelDB/.circleci/test_cohort.csv /tmp/data/test_cohort.csv
             sudo chmod a+r /tmp/data/test_cohort.csv
-            sleep 33
-            docker exec -it fixeldb fixeldb_upload \
+            docker run --rm -it \
+              -v /tmp/data:/inputs \
+              -v /tmp:/tmp \
+              pennbbl/fixeldb:latest \
               --relative-root /inputs \
               --directions-file fixeldata/directions.mif \
               --index-file fixeldata/index.mif \
-              --cohort-file test_cohort.csv
+              --cohort-file test_cohort.csv \
+              --output-hdf5 fixels.h5
 
       - store_artifacts:
           path: /tmp/data/mariadb

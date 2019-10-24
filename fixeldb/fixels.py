@@ -139,45 +139,42 @@ def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
         subject_lists[row['scalar_name']].append(ix)
 
     # Write the output
-    f = h5py.File(op.join(relative_root, output_h5), "w")
+    output_file = op.join(relative_root, output_h5)
+    f = h5py.File(output_file, "w")
     f.create_dataset(name="fixels", data=fixel_table.to_numpy())
     f.create_dataset(name="voxels", data=voxel_table.to_numpy())
-    f.create_dataset(name="phenotypes", data=cohort_df.to_numpy())
     for scalar_name in scalars.keys():
         f.create_dataset('scalars/{}/values'.format(scalar_name),
                          data=np.column_stack(scalars[scalar_name]))
         f.create_dataset('scalars/{}/ids'.format(scalar_name),
                          data=np.column_stack(subject_lists[scalar_name]))
     f.close()
+    return int(op.exists(output_file))
+
 
 def get_parser():
 
     parser = argparse.ArgumentParser(
-        description="Set up a MariaDB instance of Fixel data")
+        description="Create a hdf5 file of fixel data")
     parser.add_argument(
         "--index-file",
         help="Index File",
-        required=True
-    )
+        required=True)
     parser.add_argument(
         "--directions-file",
         help="Index File",
-        required=True
-    )
+        required=True)
     parser.add_argument(
         "--cohort-file",
         help="Index File",
-        required=True
-    )
+        required=True)
     parser.add_argument(
         "--relative-root", "--relative_root",
         help="Root to which all paths are relative",
-        type=os.path.abspath
-    )
+        type=os.path.abspath)
     parser.add_argument(
         "--output-hdf5", "--output_hdf5",
-        help="hdf5 file where outputs will be saved."
-    )
+        help="hdf5 file where outputs will be saved.")
     return parser
 
 
@@ -185,9 +182,11 @@ def main():
 
     parser = get_parser()
     args = parser.parse_args()
-
-    status = write_hdf5(args.index_file, args.directions_file, args.cohort_file,
-                        args.relative_root, args.parser)
+    status = write_hdf5(index_file=args.index_file,
+                        directions_file=args.directions_file,
+                        cohort_file=args.cohort_file,
+                        output_h5=args.output_hdf5,
+                        relative_root=args.relative_root)
     return status
 
 
