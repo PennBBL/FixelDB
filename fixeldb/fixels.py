@@ -149,7 +149,7 @@ def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
         f.create_dataset('scalars/{}/ids'.format(scalar_name),
                          data=np.row_stack(subject_lists[scalar_name]))
     f.close()
-    return int(op.exists(output_file))
+    return int(not op.exists(output_file))
 
 
 def get_parser():
