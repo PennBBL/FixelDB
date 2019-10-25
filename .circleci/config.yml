@@ -187,7 +187,7 @@ jobs:
           command: |
             if [[ -n "$DOCKER_PASS" ]]; then
               docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag pennbbl/qsi pennbbl/fixeldb:unstable
+              docker tag pennbbl/fixeldb pennbbl/fixeldb:unstable
               docker push pennbbl/fixeldb:unstable
               if [[ -n "$CIRCLE_TAG" ]]; then
                 docker push pennbbl/fixeldb:latest
