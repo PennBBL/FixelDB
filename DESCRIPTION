@@ -1,5 +1,5 @@
 Package: FixelDB
-Title: An interface for fixel data storage, access, and analysis through a MariaDB database backend
+Title: An interface for fixel data storage, access, and analysis through a HDF5 backend
 Version: 0.0.0.1
 Authors@R: 
     person(given = "First",
@@ -11,3 +11,13 @@ Description: What the package does (one paragraph).
 License: BSD 3-Clause License
 Encoding: UTF-8
 LazyData: true
+Imports: 
+    purrr,
+    magrittr,
+    stevedore,
+    dplyr,
+    tidyr,
+    stringr,
+    glue,
+    sys
+RoxygenNote: 6.1.1
