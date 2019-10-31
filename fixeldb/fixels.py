@@ -244,7 +244,13 @@ def h5_to_mifs(example_mif, h5_file, fixel_output_dir):
     h5_data = h5py.File(h5_file, "r")
     results_matrix = h5_data['results/results_matrix']
     names_data = h5_data['results/has_names']
-    results_names = [name.decode('utf8') for name in names_data.attrs['names']]
+    try:
+        results_names = [name.decode('utf8') for name in names_data.attrs['names']]
+    except Exception:
+        print("Unable to read column names, using 'componentNNN' instead")
+        results_names = ['component%03d' % (n + 1) for n in
+                         range(results_matrix.shape[1])]
+
 
     for result_col, result_name in enumerate(results_names):
         valid_result_name = result_name.replace(" ", "_").replace("/", "_")
