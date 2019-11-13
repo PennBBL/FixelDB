@@ -1,55 +1,34 @@
 # this script contains code that initialises the Fixel HDF5 database
 
-print("Initialising MariaDB database through Docker")
-
-create_fixelDB <- function(index_file, directions_file, cohort_file, output_h5 = 'fixeldb.h5',
-                          relative_root='/', img_name = "fixeldb") {
+CreateFixelArrayFile <- function(index_file, directions_file, cohort_file, output_h5 = 'fixels.h5',
+                          relative_root='/', img_name = "pennbbl/fixeldb", remove_img = TRUE, detach_img = TRUE) {
   
   # check if the image already exists
   docker <- stevedore::docker_client()
   
-  img_exists <- image_available(name, tag, docker)
+  img_exists <- docker_available(img_name, tag="latest", docker)
   
   if(!img_exists){
     
     message("Docker image not found locally! Pulling from Dockerhub")  
-    docker$image$pull(name = name, tag = tag)
+    docker$image$pull(name = img_name, tag = "latest")
     
   }
   
   command = glue::glue(
-    "run -ti --name {container_name} {ifelse(remove_img, '--rm', '')}",
-    #"-e MYSQL_ROOT_PASSWORD={mysql_root_password}",
-    #"-e MYSQL_DATABASE={mysql_database}",
-    #"-e MYSQL_USER={mysql_user}",
-    #"-e MYSQL_PASSWORD={mysql_password}",
-    #"-v {paste0(volume_mounts, collapse=' -v ')}",
+    "docker run -ti --name fixelarray {ifelse(remove_img, '--rm', '')}",
     "{ifelse(detach_img, '-d', '')}",
-    "{name}:{tag}", .sep = " ")
+    "{img_name}:latest", .sep = " ")
   
   # run the docker command
-  out <- system2("docker", command)
+  out <- system2("echo", command)
   
   # ensure it worked
   if(out != 0){
-    message("Error creating FixelDB!")
+    message("Error creating FixelArray File!")
   } else {
-    
+    message("FixelArray file created")
   }
-  
-}
-
-read_fixelDB <- function(h5_file, cohort_file){
-  
-  dat <- rhdf5::H5Fopen(h5_file)
-  
-  cohort_df <- readr::read_csv(cohort_file)
-  
-  x <- list(data = dat, cohort = cohort_df)
-  
-  class(x) <- "fixelDB"
-  
-  x
   
 }
 

@@ -1,4 +1,4 @@
-Package: FixelDB
+Package: FixelArray
 Title: An interface for fixel data storage, access, and analysis through a HDF5 backend
 Version: 0.0.0.1
 Authors@R: 
@@ -19,5 +19,9 @@ Imports:
     tidyr,
     stringr,
     glue,
-    sys
+    sys,
+    parallel,
+    HDF5Array,
+    rhdf5
+Depends: HDF5Array
 RoxygenNote: 6.1.1

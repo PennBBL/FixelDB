@@ -2,7 +2,7 @@
 
 
 
-image_available <- function(name, tag, docker_client){
+docker_available <- function(name, tag, docker_client){
   
   # this function makes sure the docker image is available 
   
