@@ -20,7 +20,7 @@ RUN \
 ENV PATH="/opt/mrtrix3/bin:$PATH"
 
 RUN mkdir -p /fixeldb
-COPY . /fixeldb/
+COPY ./inst/python/fixeldb/ /fixeldb/
 RUN pip3 install --no-cache-dir /fixeldb
 
-ENTRYPOINT ["/usr/local/bin/fixeldb_create"]
+ENTRYPOINT ["/usr/local/bin/fixel-backend-create"]

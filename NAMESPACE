@@ -2,3 +2,10 @@
 
 export("%>%")
 importFrom(magrittr,"%>%")
+import(methods)
+importFrom(tools, file_path_as_absolute)
+
+import(BiocGenerics)
+import(S4Vectors)
+import(IRanges)
+import(DelayedArray)

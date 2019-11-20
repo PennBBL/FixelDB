@@ -1,28 +1,26 @@
-print("hello-world2")
-
 FixelArraySeed <- function(
   filepath,
   name = "fixels",
   type = NA) {
-  
+
   if(all(
     c("fixels", "voxels", "scalars")
     %in%
     rhdf5::h5ls(filepath)$name
   )
   ) {
-    
+
     seed = HDF5Array::HDF5ArraySeed(
       filepath, name = name, type = type)
-    
+
     seed
-    
+
   } else {
-    
+
     stop("Improperly formatted Fixel data")
-    
+
   }
-  
+
 }
 
 setClass(
@@ -39,13 +37,13 @@ setClass(
 )
 
 FixelArray <- function(filepath, scalar_types = c("FD")) {
-  
+
   fixel_data <- FixelArraySeed(filepath, name = "fixels", type = NA) %>%
     DelayedArray::DelayedArray()
   
   voxel_data <- FixelArraySeed(filepath, name = "voxels", type = NA) %>%
     DelayedArray::DelayedArray()
-  
+
   ids <- vector("list", length(scalar_types))
 
   scalar_data <- vector("list", length(scalar_types))
@@ -63,7 +61,7 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
   names(ids) <- scalar_types
 
   results <- NULL
-  
+
   new(
     "FixelArray",
     fixels = fixel_data,
@@ -73,11 +71,16 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
     results = results,
     path = filepath
   )
+
+}
+
+FixelMatrix <- function(fa){
+  
   
 }
 
 setMethod("show", "FixelArray", function(object) {
-  
+
   cat(is(object)[[1]], " located at ", object@path, "\n\n",
       format("  Fixel data:", justify = "left", width = 20), dim(fixels(object))[1], " fixels\n",
       format("  Voxel data:", justify = "left", width = 20), dim(voxels(object))[1], " fixels\n",
@@ -86,7 +89,7 @@ setMethod("show", "FixelArray", function(object) {
       #format("  Analyses:", justify = "left", width = 20), results(object), "\n",
       sep = ""
   )
-  
+
 })
 
 
@@ -101,21 +104,21 @@ setMethod("subjects", "FixelArray", function(x) x@subjects)
 
 setGeneric("scalars", function(x, ...) standardGeneric("scalars"))
 setMethod(
-  "scalars", 
-  "FixelArray", 
+  "scalars",
+  "FixelArray",
   function(x, ...) {
-  
+
     dots <- list(...)
-    
+
     if(length(dots) == 1) {
-      
+
       scalar <- dots[[1]]
       x@scalars[[scalar]]
-      
+
     } else {
-      
+
       x@scalars
-      
+
     }
   }
 )
