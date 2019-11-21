@@ -28,7 +28,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'fixel-backend-create=fixels:main',
+            'fixel-backend-create=create_backend.fixels:main',
         ],
     }
 )

@@ -1,0 +1,41 @@
+---
+title: "Benchmarking `lm()` for FixelArray"
+output: html_notebook
+---
+
+Here we benchmark the performance of FixelArray running `lm()` with different values for number of cores and number of fixels analysed.
+
+```{r}
+library(tictoc)
+
+cores <- c(1, 2, 5, 10)
+fixel_idx <- c(10, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000)
+
+results <- data.frame()
+
+tic.clearlog()
+for(c in cores){
+  
+  
+  for(f in fixel_idx){
+    
+    tic()
+    res <- FixelArray.lm(Age ~ Sex + Diagnosis + FC, x, phenotypes, scalar = "FC", idx = 1:f, pbar = FALSE, n_cores = c, verbose = FALSE)
+    lg <- toc(log = TRUE, quiet = TRUE)
+    results <- rbind(results, data.frame(cores = c, fixels = f))
+    
+  }
+}
+
+log.lst <- tic.log(format = FALSE)
+results$time <- unlist(lapply(log.lst, function(x) x$toc - x$tic))
+```
+
+```{r}
+ggplot(results, aes(x=fixels, y = time)) + 
+  geom_line(aes(colour=as.factor(cores))) +
+  theme_minimal()
+```
+
+
+

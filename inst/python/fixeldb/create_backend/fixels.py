@@ -143,10 +143,10 @@ def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
     # upload each cohort's data
     scalars = defaultdict(list)
     subject_lists = defaultdict(list)
+    print("Extracting .mif data...")
     for ix, row in tqdm(cohort_df.iterrows(), total=cohort_df.shape[0]):
-        print(row)
 
-        scalar_file = op.join(relative_root, row.scalar_name)
+        scalar_file = op.join(relative_root, row['scalar_mif'])
         scalar_img, scalar_data = mif_to_nifti2(scalar_file)
         scalars[row['scalar_name']].append(scalar_data)
         subject_lists[row['scalar_name']].append(ix)
@@ -154,8 +154,13 @@ def write_hdf5(index_file, directions_file, cohort_file, output_h5='fixeldb.h5',
     # Write the output
     output_file = op.join(relative_root, output_h5)
     f = h5py.File(output_file, "w")
-    f.create_dataset(name="fixels", data=fixel_table.to_numpy().T)
-    f.create_dataset(name="voxels", data=voxel_table.to_numpy().T)
+    
+    fixelsh5 = f.create_dataset(name="fixels", data=fixel_table.to_numpy().T)
+    fixelsh5.attrs['column_names'] = list(fixel_table.columns)
+    
+    voxelsh5 = f.create_dataset(name="voxels", data=voxel_table.to_numpy().T)
+    voxelsh5.attrs['column_names'] = list(voxel_table.columns)
+    
     for scalar_name in scalars.keys():
         f.create_dataset('scalars/{}/values'.format(scalar_name),
                          data=np.row_stack(scalars[scalar_name]))
@@ -193,8 +198,15 @@ def get_parser():
 
 def main():
 
+    path = '/inputs'
+
+    subfolders = [f.path for f in os.scandir(path)]
+    print(subfolders)
+
     parser = get_parser()
     args = parser.parse_args()
+    print(args)
+    return
     status = write_hdf5(index_file=args.index_file,
                         directions_file=args.directions_file,
                         cohort_file=args.cohort_file,
