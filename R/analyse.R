@@ -344,6 +344,7 @@ FixelArray.gamm4 <- function(formula, data, phenotypes, scalar, verbose = TRUE, 
 #' @return Tibble with the summarised model statistics at each fixel location
 #' 
 FixelArray.gam <- function(formula, data, phenotypes, scalar, verbose = TRUE, idx = NULL, pbar = TRUE, n_cores = 1, write = TRUE, ...){
+# TODO: how to pass arguments to gam like in this example https://broom.tidyverse.org/reference/mgcv_tidy_gam.html  
   
   # data type assertions
   if(class(data) != "FixelArray") {
@@ -409,7 +410,7 @@ FixelArray.gam <- function(formula, data, phenotypes, scalar, verbose = TRUE, id
         dat[[scalar]] <- values
         
         mgcv::gam(formula, data = dat, ...) %>%
-          broom::tidy(parametric = TRUE) %>%
+          broom::tidy() %>%
           dplyr::mutate(fixel_id = i-1)
         
       })

@@ -36,6 +36,13 @@ setClass(
    )
 )
 
+#' Load fixel data output from mrtrix as an h5 file into R as a FixelArray object
+#'
+#' @param filepath file
+#' @param scalar_types expected scalars
+#' @return FixelArray object
+#' 
+
 FixelArray <- function(filepath, scalar_types = c("FD")) {
 
   fixel_data <- FixelArraySeed(filepath, name = "fixels", type = NA) %>%
@@ -81,9 +88,27 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
 
 }
 
-FixelMatrix <- function(fa){
+# FixelMatrix <- function(fa){
+#   
+#   
+# }
+
+#' Write outputs from fixel-based analysis out to the h5 file
+#'
+#' @param fa FixelArray object
+#' @param data A data.frame object with model results at each fixel
+#' @param name Name assigned to the results table in the h5 file
+#' 
+
+writeResults <- function(fa, data, name = "results"){
   
+  if(!("data.frame" %in% class(data))) {
+    stop("Results dataset is not correct; must be data of type `data.frame`")
+  }
   
+  rhdf5::h5write(data, fa@path, name)
+  
+  message("Results file written!")
 }
 
 setMethod("show", "FixelArray", function(object) {

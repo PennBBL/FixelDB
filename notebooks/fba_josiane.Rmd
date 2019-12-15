@@ -1,0 +1,81 @@
+---
+title: "Fixel-wise GAM models"
+output: html_notebook
+---
+
+Here we demonstrate fitting gam models at each fixel for a fixelarray dataset with  > 1000 subjects.
+
+1. Get the package
+
+To get the package from Github, because it's not on `CRAN` yet:
+
+```
+# go to your desired directory for the project
+# cd ~/projects
+
+# clone the repository from github
+git clone https://github.com/PennBBL/FixelDB.git
+
+# go to the repo
+cd FixelDB
+
+# specifically, use the `develop` branch
+git checkout develop
+```
+
+2. Start R
+
+In the same `FixelDB` directory, start your RStudio (recommended) or R session.
+
+3. Load the library
+
+Use the `devtools` package to load this library:
+
+```{r}
+# install.packages("devtools")
+
+# devtools:load_all()
+
+## if the above does not work, just source() the files
+
+# source("FixelArray.R)
+# source("analyse.R)
+```
+
+4. Once successful, you can use the library for your analysis:
+
+To load fixel data, just use `FixelArray("path")`
+```{r}
+y <- FixelArray("/storage/fixel_stats_testing/fixel_pnc/fixel_ws_fd.h5")
+y
+```
+
+Also, load your covariates table (any parsable `csv` file) with the same cohort as the h5 fixel file.
+
+```{r}
+phenos <- read.csv("./data/gam_var.csv")
+
+head(phenos)
+```
+
+Then, you can use any of the available models to fit. There are a small handful of additional arguments you have to provide to `FixelArray` models to control efficiency options (e.g. see `?FixelArray.gam()`), but otherwise, the arguments are the passed on to the model you are fitting and so you can write the formula and formula args as normal:
+
+```{r}
+
+fixel_ids <- 1:1000 # note R indexing @ 1 here even though fixels start at 0
+
+result <- FixelArray.gam(FD ~ s(Age,k=4) + sex, data = y, scalar =  "FD", phenotypes = phenos, fx=TRUE, n_cores = 12)
+```
+
+We can now see the result of the `gam` model fit at every fixel including the test statistics:
+
+```{r}
+head(result)
+```
+
+You can then write out the result with `writeResults()`
+
+```{r}
+#writeResults(y, result)
+```
+
