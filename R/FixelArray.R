@@ -25,7 +25,7 @@ FixelArraySeed <- function(
 
 setClass(
   "FixelArray",
-  contains="DelayedArray",
+  #contains="DelayedArray",
    slots = c(
      fixels="DelayedArray",
      voxels="DelayedArray",
@@ -39,12 +39,14 @@ setClass(
 FixelArray <- function(filepath, scalar_types = c("FD")) {
 
   fixel_data <- FixelArraySeed(filepath, name = "fixels", type = NA) %>%
-    DelayedArray::DelayedArray()
+    DelayedArray::DelayedArray() %>%
+    t()
   
   colnames(fixel_data) <- c("Fixel_id", "Voxel_id", "x", "y", "z")
   
   voxel_data <- FixelArraySeed(filepath, name = "voxels", type = NA) %>%
-    DelayedArray::DelayedArray()
+    DelayedArray::DelayedArray() %>%
+    t()
   
   colnames(voxel_data) <- c("Voxel_id", "x", "y", "z")
 
@@ -55,7 +57,8 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
   for(x in 1:length(scalar_types)){
 
     scalar_data[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/values", scalar_types[x]), type = NA) %>%
-      DelayedArray::DelayedArray()
+      DelayedArray::DelayedArray() %>%
+      t()
 
     ids[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/ids", scalar_types[x]), type = NA) %>%
       DelayedArray::DelayedArray()
@@ -88,8 +91,8 @@ setMethod("show", "FixelArray", function(object) {
   cat(is(object)[[1]], " located at ", object@path, "\n\n",
       format("  Fixel data:", justify = "left", width = 20), dim(fixels(object))[1], " fixels\n",
       format("  Voxel data:", justify = "left", width = 20), dim(voxels(object))[1], " voxels\n",
-      format("  Subjects:", justify = "left", width = 20), dim(subjects(object)[[1]])[2], "\n",
-      format("  Scalars:", justify = "left", width = 20), paste0(names(scalars(x)), collapse = ", "), "\n",
+      format("  Subjects:", justify = "left", width = 20), dim(subjects(object)[[1]])[1], "\n",
+      format("  Scalars:", justify = "left", width = 20), paste0(names(scalars(object)), collapse = ", "), "\n",
       #format("  Analyses:", justify = "left", width = 20), results(object), "\n",
       sep = ""
   )

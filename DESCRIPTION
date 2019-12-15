@@ -22,6 +22,8 @@ Imports:
     sys,
     parallel,
     HDF5Array,
-    rhdf5
+    rhdf5,
+    gamm4,
+    mgcv
 Depends: HDF5Array
 RoxygenNote: 6.1.1
