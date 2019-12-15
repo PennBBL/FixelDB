@@ -16,9 +16,10 @@ results <- data.frame()
 tic.clearlog()
 for(c in cores){
   
-  
+  print(paste0("Cores: ", c))
   for(f in fixel_idx){
     
+    print(paste0("Fixels: ", f))
     tic()
     res <- FixelArray.lm(Age ~ Sex + Diagnosis + FC, x, phenotypes, scalar = "FC", idx = 1:f, pbar = FALSE, n_cores = c, verbose = FALSE)
     lg <- toc(log = TRUE, quiet = TRUE)
@@ -32,9 +33,12 @@ results$time <- unlist(lapply(log.lst, function(x) x$toc - x$tic))
 ```
 
 ```{r}
-ggplot(results, aes(x=fixels, y = time)) + 
+results %>%
+  mutate(time = time/60) %>%
+  ggplot(aes(x=fixels, y = time)) + 
   geom_line(aes(colour=as.factor(cores))) +
-  theme_minimal()
+  theme_minimal() +
+  labs(y = "Time (mins)")
 ```
 
 
