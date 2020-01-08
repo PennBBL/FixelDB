@@ -23,10 +23,6 @@ RUN mkdir -p /fixeldb
 COPY ./inst/python/fixeldb/ /fixeldb/
 RUN pip3 install --no-cache-dir /fixeldb
 
-<<<<<<< HEAD
-ENTRYPOINT ["/usr/local/bin/fixeldb_create"]
-=======
 RUN mkdir -p /inputs
 
 ENTRYPOINT ["fixel-backend-create"]
->>>>>>> develop
