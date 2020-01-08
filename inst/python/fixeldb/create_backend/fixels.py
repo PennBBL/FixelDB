@@ -189,10 +189,10 @@ def get_parser():
     parser.add_argument(
         "--relative-root", "--relative_root",
         help="Root to which all paths are relative",
-        type=os.path.abspath)
+        type=os.path.abspath, default="/inputs/")
     parser.add_argument(
         "--output-hdf5", "--output_hdf5",
-        help="hdf5 file where outputs will be saved.")
+        help="hdf5 file where outputs will be saved.", default="fixelarray.h5")
     return parser
 
 
@@ -201,12 +201,9 @@ def main():
     path = '/inputs'
 
     subfolders = [f.path for f in os.scandir(path)]
-    print(subfolders)
 
     parser = get_parser()
     args = parser.parse_args()
-    print(args)
-    return
     status = write_hdf5(index_file=args.index_file,
                         directions_file=args.directions_file,
                         cohort_file=args.cohort_file,

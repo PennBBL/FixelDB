@@ -46,14 +46,24 @@ setClass(
 FixelArray <- function(filepath, scalar_types = c("FD")) {
 
   fixel_data <- FixelArraySeed(filepath, name = "fixels", type = NA) %>%
-    DelayedArray::DelayedArray() %>%
-    t()
+    DelayedArray::DelayedArray()
+  
+  if(dim(fixel_data)[2] != 5) {
+    
+    fixel_data <- t(fixel_data)
+    
+  }
   
   colnames(fixel_data) <- c("Fixel_id", "Voxel_id", "x", "y", "z")
   
   voxel_data <- FixelArraySeed(filepath, name = "voxels", type = NA) %>%
-    DelayedArray::DelayedArray() %>%
-    t()
+    DelayedArray::DelayedArray()
+  
+  if(dim(voxel_data)[2] != 4) {
+    
+    fixel_data <- t(fixel_data)
+    
+  }
   
   colnames(voxel_data) <- c("Voxel_id", "x", "y", "z")
 
@@ -64,11 +74,18 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
   for(x in 1:length(scalar_types)){
 
     scalar_data[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/values", scalar_types[x]), type = NA) %>%
-      DelayedArray::DelayedArray() %>%
-      t()
+      DelayedArray::DelayedArray()
+    
+    if(dim(scalar_data[[x]])[1] < dim(scalar_data[[x]])[2]){
+      scalar_data[[x]] <- t(scalar_data[[x]])
+    }
 
     ids[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/ids", scalar_types[x]), type = NA) %>%
       DelayedArray::DelayedArray()
+    
+    if(dim(ids[[x]])[1] < dim(ids[[x]])[2]){
+      ids[[x]] <- t(ids[[x]])
+    }
   }
 
   names(scalar_data) <- scalar_types

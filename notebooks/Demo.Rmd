@@ -1,0 +1,66 @@
+---
+title: "Demo"
+output: html_notebook
+---
+
+# How to run Fixel Based Analysis (FBA) with `FixelArray`
+
+First, you need to convert the output of your `mrtrix` preprocessing into an HDF5 file (h5). HDF5 technology allows `FixelArray` to save memory and computation by operating on-disk instead of using RAM.
+
+You can convert the `mrtrix` output directory to h5 with `CreateFixelArrayFile()`
+
+```{r}
+# ?CreateFixelArrayFile()
+
+CreateFixelArrayFile(
+  index_file = "FD/index.mif", 
+  directions_file = "FD/directions.mif", 
+  cohort_file = "fd_inputs_all.csv", 
+  output_h5 = "foo.h5", 
+  fixel_directory = "/home/ttapera/FixelArray/data/ZAPR01_Fixels/"
+)
+```
+
+Once this is successful, you can read the file you created into your R workspace using `FixelArray()`, well as reading your cohort file in order to use the covariates for analyses.
+
+```{r}
+# ?FixelArray()
+
+y <- FixelArray("../data/ZAPR01_Fixels/foo.h5", c("FC", "FD", "FDC", "logFC"))
+phenotypes <- read.csv("../data/ZAPR01_Fixels/fd_inputs_all.csv")
+```
+
+FixelArray objects are S4 data structures, and appear in R as collections of Fixel, Voxel, and Scalar data. They are stored in one object for convenience, but are essentially multiple heirarchical tables. If ever you are unsure of, or need to explore h5 files, we recommend using the `rhdf5` package (should be pre-installed with your installation of `FixelArray`).
+
+There are a number of inspectors for you to understand the data format.
+
+```{r}
+print(y)
+```
+
+```{r}
+fixels(y)
+```
+
+```{r}
+voxels(y)
+```
+
+```{r}
+scalars(y)
+```
+
+Otherwise, if you are comfortable with S4 syntax, you can use that to explore the data structure slots:
+
+```{r}
+y@path
+```
+
+To run `t.test` at each fixel location, simply use `FixelArray.t.test()`
+
+```{r}
+# ?FixelArray.t.test()
+
+FixelArray.t.test(FD ~ Sex, data = y, phenotypes = phenotypes, scalar = "FD", idx = 1:1000, n_cores = 4)
+```
+
