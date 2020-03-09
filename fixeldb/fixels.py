@@ -243,9 +243,11 @@ def h5_to_mifs(example_mif, h5_file, fixel_output_dir):
     nifti2_img, _ = mif_to_nifti2(example_mif)
     h5_data = h5py.File(h5_file, "r")
     results_matrix = h5_data['results/results_matrix']
+    
     names_data = h5_data['results/has_names']
+    
     try:
-        results_names = [name.decode('utf8') for name in names_data.attrs['names']]
+        results_names = [name.decode('utf8') for name in names_data[()]]
     except Exception:
         print("Unable to read column names, using 'componentNNN' instead")
         results_names = ['component%03d' % (n + 1) for n in
@@ -253,6 +255,7 @@ def h5_to_mifs(example_mif, h5_file, fixel_output_dir):
 
 
     for result_col, result_name in enumerate(results_names):
+        
         valid_result_name = result_name.replace(" ", "_").replace("/", "_")
         out_mif = op.join(fixel_output_dir, valid_result_name + '.mif')
         temp_nifti2 = nb.Nifti2Image(results_matrix[:, result_col].reshape(-1, 1, 1),
