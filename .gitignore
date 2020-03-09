@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+.DS_Store
+scratch/
 pip-wheel-metadata
 __pycache__/
 *.py[cod]
