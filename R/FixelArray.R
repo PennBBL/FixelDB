@@ -125,9 +125,11 @@ writeResults <- function(fa, data, name = "results"){
   
   suppressMessages(rhdf5::h5createGroup(fa@path,"results"))
   
-  rhdf5::h5write(data, fa@path, name)
   names <- names(data)
-  rhdf5::h5writeDataset(names, fa@path, "results/has_names")
+  
+  rhdf5::h5write(t(as.matrix(data)), fa@path, name)
+  
+  rhdf5::h5write(names, fa@path, "results/has_names")
   
   message("Results file written!")
 }
