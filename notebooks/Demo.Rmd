@@ -13,10 +13,10 @@ You can convert the `mrtrix` output directory to h5 with `CreateFixelArrayFile()
 # ?CreateFixelArrayFile()
 
 CreateFixelArrayFile(
-  index_file = "FD/index.mif", 
-  directions_file = "FD/directions.mif", 
-  cohort_file = "fd_inputs_all.csv", 
-  output_h5 = "foo.h5", 
+  index_file = "FD/index.mif",
+  directions_file = "FD/directions.mif",
+  cohort_file = "fd_inputs_all.csv",
+  output_h5 = "foo.h5",
   fixel_directory = "/home/ttapera/FixelArray/data/ZAPR01_Fixels/"
 )
 ```
@@ -61,6 +61,19 @@ To run `t.test` at each fixel location, simply use `FixelArray.t.test()`
 ```{r}
 # ?FixelArray.t.test()
 
-FixelArray.t.test(FD ~ Sex, data = y, phenotypes = phenotypes, scalar = "FD", idx = 1:1000, n_cores = 4)
+ttest <- FixelArray.t.test(FD ~ Sex, data = y, phenotypes = phenotypes, scalar = "FD", idx = 1:1000, n_cores = 4) #to run statistics on all available fixels, remove idx
 ```
 
+The next step is to save your results table (ttest) to your h5 file using writeResults. Before doing so, however, we must reorganize the ttest output from long to wide format (one fixel per row) using pivot.
+
+```{r}
+ttest %>%
+  mutate(term = stringr::str_replace_all(term, "\\(|\\)", "")) %>%
+  tidyr::pivot_wider(names_from = term, values_from = c(estimate, std.error, statistic, p.value)) -> ttest.pivot
+```
+
+Now we can write out the results to the h5 file on disc! Keep the naming convention name = 'results/results_matrix'.
+
+```{r}
+writeResults(fa=y, data= ttest.pivot, name = 'results/results_matrix')
+```

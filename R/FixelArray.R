@@ -41,30 +41,30 @@ setClass(
 #' @param filepath file
 #' @param scalar_types expected scalars
 #' @return FixelArray object
-#' 
+#'
 
 FixelArray <- function(filepath, scalar_types = c("FD")) {
 
   fixel_data <- FixelArraySeed(filepath, name = "fixels", type = NA) %>%
     DelayedArray::DelayedArray()
-  
+
   if(dim(fixel_data)[2] != 5) {
-    
+
     fixel_data <- t(fixel_data)
-    
+
   }
-  
+
   colnames(fixel_data) <- c("Fixel_id", "Voxel_id", "x", "y", "z")
-  
+
   voxel_data <- FixelArraySeed(filepath, name = "voxels", type = NA) %>%
     DelayedArray::DelayedArray()
-  
+
   if(dim(voxel_data)[2] != 4) {
-    
+
     fixel_data <- t(fixel_data)
-    
+
   }
-  
+
   colnames(voxel_data) <- c("Voxel_id", "x", "y", "z")
 
   ids <- vector("list", length(scalar_types))
@@ -75,14 +75,14 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
 
     scalar_data[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/values", scalar_types[x]), type = NA) %>%
       DelayedArray::DelayedArray()
-    
+
     if(dim(scalar_data[[x]])[1] < dim(scalar_data[[x]])[2]){
       scalar_data[[x]] <- t(scalar_data[[x]])
     }
 
     ids[[x]] <- FixelArraySeed(filepath, name = sprintf("scalars/%s/ids", scalar_types[x]), type = NA) %>%
       DelayedArray::DelayedArray()
-    
+
     if(dim(ids[[x]])[1] < dim(ids[[x]])[2]){
       ids[[x]] <- t(ids[[x]])
     }
@@ -106,8 +106,8 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
 }
 
 # FixelMatrix <- function(fa){
-#   
-#   
+#
+#
 # }
 
 #' Write outputs from fixel-based analysis out to the h5 file
@@ -115,16 +115,22 @@ FixelArray <- function(filepath, scalar_types = c("FD")) {
 #' @param fa FixelArray object
 #' @param data A data.frame object with model results at each fixel
 #' @param name Name assigned to the results table in the h5 file
-#' 
+#'
 
 writeResults <- function(fa, data, name = "results"){
-  
+
   if(!("data.frame" %in% class(data))) {
     stop("Results dataset is not correct; must be data of type `data.frame`")
   }
-  
-  rhdf5::h5write(data, fa@path, name)
-  
+
+  suppressMessages(rhdf5::h5createGroup(fa@path,"results"))
+
+  names <- names(data)
+
+  rhdf5::h5write(t(as.matrix(data)), fa@path, name)
+
+  rhdf5::h5write(names, fa@path, "results/has_names")
+
   message("Results file written!")
 }
 
